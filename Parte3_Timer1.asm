@@ -81,7 +81,7 @@ OC0A_IRQSRV	:
 				dec r19			    // Here every 2 ms
 				brne endisr
 
-				ldi	r19,100			//Here every 10 x 2 ms = 20ms
+				ldi	r19,10			//Here every 10 x 2 ms = 20ms
 
 toggle:			in r24,PORTB		//Toggle led 
 				ldi r23,B5
