@@ -91,18 +91,7 @@ start:		clr r24			//Sets the timer off when starting
 			ldi r20, 4
 			sts digit_counter, r20		//Sets initial digit_counter value
 
-			ldy valores_numero
-			ldi r20, 0
-			st Y+, r20
-
-			ldi r20, 1
-			st Y+, r20
-
-			ldi r20, 2
-			st Y+, r20
-
-			ldi r20, 3
-			st Y, r20
+			loadValues 0, 1, 2, 3
 
 			ldi r19, 5		//Initial load of the register for interruption every 10ms
 
