@@ -126,9 +126,31 @@ start:		clr r24			//Sets the timer off when starting
 		sei			//Enable processor interrupts
 
 
-loop:		//Infinite Loop
-	rjmp loop
+num1:		//Infinite Loop
+	loadValues 0, 7, 0, 0
+	ldi r22, 700/10
+	call start_timer
 
+wait1:
+	nop
+	nop
+	call timer_status
+	breq num2
+
+	jmp wait1
+
+num2:
+	loadValues 0, 5, 0, 0
+	ldi r22, 500/10
+	call start_timer
+
+wait2:
+	nop
+	nop
+	call timer_status
+	breq num1
+
+	jmp wait2
 
 
 
