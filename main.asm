@@ -104,8 +104,8 @@ start:
 /////////////////////////////////////////////
 
 apagado:
-	ldi OutRegister, 0xFF
-	out PORTB, OutRegister
+	ldi PortOut, 0xFF
+	out PORTB, PortOut
 apagadoloop:
 	nop		//Para saturar menos la cpu colocamos dos nop
 	nop
@@ -115,22 +115,46 @@ apagadocheck:
 	jmp apagadoloop
 
 encendido1:
-	ldi OutRegister, (~LED1)
-	out PORTB, OutRegister
+	ldi PortOut, (~LED1)
+	out PORTB, PortOut
 
 	ldi r22, 1000/10
 	call start_timer
 
+encendido1_2:
+	nop
+	nop
 
-	ldi OutRegister, 0xFF
-	out PORTB, OutRegister
-	rcall delay_1s
+	call Get_Button_Status
+	breq apagado
 
-	rjmp encendido
+	call timer_status
+	breq encendido2
+	jmp encendido1_2
+
+encendido2:
+	ldi PortOut, 0xFF
+	out PORTB, PortOut
+
+	ldi r22, 1000/10
+	call start_timer
+
+encendido2_2:
+	nop
+	nop
+
+	call Get_Button_Status
+	breq apagado
+
+	call timer_status
+	breq encendido1
+	jmp encendido2_2
 
 
 //Interrupt service routine (ISR) for pin PC1
 // Timer int happens every (16MHz)^(-1)*256*125 = 62.5ns*256*125 = 64 * 125 useg = 2mseg
+	.def CounterValue = r18
+
 OC0A_IRQSRV	:
 				push r16
 				in r16,SREG			//Save processor status register
