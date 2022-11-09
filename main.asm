@@ -63,7 +63,10 @@
 
 
 start:
-	ldi r19, 10		//Initial set of the counter in the isr
+	ldi r19, 5		//Initial set of the counter in the isr
+
+	ldi r20, 10
+	sts times_counter, r20
 
 	ldi PortOut, (SHIFT_CLOCK | LATCH_CLOCK | SERIAL_DATA)
 	out DDRD, PortOut
@@ -108,13 +111,16 @@ apagadoloop:
 	nop
 apagadocheck:
 	call Get_Button_Status
-	breq encendido
+	breq encendido1
 	jmp apagadoloop
 
-encendido:
+encendido1:
 	ldi OutRegister, (~LED1)
 	out PORTB, OutRegister
-	rcall delay_1s
+
+	ldi r22, 1000/10
+	call start_timer
+
 
 	ldi OutRegister, 0xFF
 	out PORTB, OutRegister
@@ -132,12 +138,22 @@ OC0A_IRQSRV	:
 				push CounterValue
 				pushy
 
-				call display_Refresh
+				ldy times_counter
+				ld r16, Y
+
+				dec r16
+				breq reading_button
+				jmp check_call
+
+reading_button:	ldi r16, 10
+				call read_button
+
+check_call:		sts times_counter, r16		
 
 				ldy tim_status
 				ld r16, Y
 
-check_call:		cpi r16, 0		//Checks that the timer has been set
+				cpi r16, 0		//Checks that the timer has been set
 				breq endisr
 
 				dec r19			    // Here every 2 ms
@@ -207,7 +223,7 @@ start_timer:
 		ret
 		
 // **********************************************************************************************
-// read_button: Reads button and saves it to RAM (prev_button)
+// read_button: Reads button and saves falling edge as a flag in RAM (button_status)
 // ********************************************************************************************
 	.def Previous = r20
 	.def Actual = r19
@@ -218,17 +234,27 @@ read_button:
 				push Actual
 
 				ldy prev_button
-				ld Previous, prev_button
+				ld Previous, Y
 
 				in Actual, PINC
 				andi Actual, S1
 
 				cp Previous, Actual
-				brne set_flag					//Check if changed
+				brne check_edge					//Check if changed
+
+				ldi Actual, 0
+				sts button_status, Actual
 				jmp endStatus
 
 
-set_flag:		sts prev_button, Actual			//If changed, changes the button status
+check_edge:		sts prev_button, Actual			//Saves new value if changed
+
+				cpi Actual, 0
+				breq set_flag
+				jmp endStatus
+
+set_flag:		ldi Actual, 1
+				sts button_status, Actual
 
 endStatus:		pop Actual
 				pop Previous
@@ -236,15 +262,16 @@ endStatus:		pop Actual
 				
 
 // **********************************************************************************************
-// Get_Button_Status: Returns Z=1 if button is pressed
+// Get_Button_Status: Returns Z=1 if falling edge on button
 // ********************************************************************************************
 Get_Button_Status:
 				pushy
 				push Actual
 
-				ldy prev_button
+				ldy button_status
 				ld Actual, Y
-				cpi Actual, 0x02
+
+				cpi Actual, 1
 
 				pop Actual
 				popy
@@ -261,6 +288,12 @@ PCI1_IRQSRV:
 
 				.org 0x100				//Start of internal ram
 
-prev_button:	.byte 1
+prev_button:		.byte	1
 
-button_status:	.byte 1
+button_status:		.byte	1
+
+tim_status:			.byte	1				//Saves 0 or 1 depending on timer status
+
+times_counter:		.byte	1
+
+timcnt:				.byte	1*ELSIZE		//Saves byte*10ms for the timer
